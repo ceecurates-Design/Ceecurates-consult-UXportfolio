@@ -134,7 +134,10 @@
 
   /* Elements */
   const hero = qs('[data-hero]');
+  const fanEl = qs('[data-fan]');
   const fanCards = qsa('[data-fan] .fcard');
+  let fanW = 300;
+  let fanStep = 0.36;
   const heroLines = qsa('[data-line]', hero);
   const badge = qs('[data-badge]');
   const tapes = qsa('[data-tape]').map((el) => ({ el, track: qs('.tape__track', el), dir: Number(el.dataset.tape), x: 0, unit: 0 }));
@@ -145,7 +148,6 @@
   const rails = qsa('.rail i');
   const statement = qs('[data-statement]');
   const slides = qsa('[data-slide]').map((el) => ({ el, dir: Number(el.dataset.slide) }));
-  const bracelet = qs('[data-spin]');
   const wall = qs('[data-wall]');
   const track = qs('[data-track]');
   const tiles = qsa('[data-tile]').map((el) => ({ el, card: qs('.tile__card', el), center: 0 }));
@@ -153,7 +155,6 @@
   const portrait = qs('[data-portrait]');
   const portraitBlock = qs('[data-portrait-block]');
   const contact = qs('[data-contact]');
-  const hand = qs('[data-hand]');
 
   /* Measurements, cached and refreshed on resize */
   let vw = innerWidth;
@@ -185,6 +186,8 @@
     m.trackLeft = trackLeft;
 
     m.hero = box(hero);
+    fanW = fanEl.offsetWidth || fanW;
+    fanStep = parseFloat(getComputedStyle(fanEl).getPropertyValue('--fan-step')) || 0.36;
     m.collection = box(collection);
     m.statement = box(statement);
     m.wall = box(wall);
@@ -275,9 +278,12 @@
       const mid = (fanCards.length - 1) / 2;
       fanCards.forEach((c, i) => {
         const o = i - mid;
-        const a = o * 9.5 * spread + turn * intro;
+        // Wide cards: slide apart like a dealt hand, dip at the edges, then tilt.
+        const x = o * fanW * fanStep * spread;
+        const dip = o * o * fanW * 0.035 * spread;
+        const a = o * 5 * spread + turn * intro * 0.6;
         const lift = -hp * vh * 0.2 * (1 + Math.abs(o) * 0.12) + mouse.sy * -10;
-        c.style.transform = `translate3d(0,${lift.toFixed(1)}px,0) rotate(${a.toFixed(2)}deg)`;
+        c.style.transform = `translate3d(${x.toFixed(1)}px,${(lift + dip).toFixed(1)}px,0) rotate(${a.toFixed(2)}deg)`;
       });
       heroLines.forEach((l) => {
         const dir = Number(l.dataset.line);
@@ -324,7 +330,7 @@
       }
     }
 
-    /* Statement: lines slide against each other, the bracelet turns */
+    /* Statement: lines slide against each other */
     {
       const b = m.statement;
       if (smooth > b.top - vh && smooth < b.top + b.height) {
@@ -332,7 +338,6 @@
         slides.forEach((s) => {
           s.el.style.transform = `translate3d(${((0.5 - p) * s.dir * vw * 0.16).toFixed(1)}px,0,0)`;
         });
-        bracelet.style.transform = `rotate(${(p * 540 - 200).toFixed(1)}deg) scale(${(0.8 + Math.sin(p * Math.PI) * 0.3).toFixed(3)})`;
       }
     }
 
@@ -371,14 +376,6 @@
       }
     }
 
-    /* Contact: the hand waves you in */
-    {
-      const b = m.contact;
-      if (smooth > b.top - vh && smooth < b.top + b.height) {
-        const p = clamp((smooth + vh - b.top) / (vh * 1.1));
-        hand.style.transform = `translate3d(0,${((1 - p) * 26).toFixed(1)}%,0) rotate(${(lerp(22, -8, p) + Math.sin(now / 900) * 1.4).toFixed(2)}deg)`;
-      }
-    }
 
     /* Pointer followers */
     if (fine) {

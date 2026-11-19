@@ -48,7 +48,7 @@ ol { padding: 0; margin: 0; list-style: none; }
 .phero__lede { max-width: 40ch; font-size: clamp(1.1rem, 1.65vw, 1.5rem); line-height: 1.32; font-weight: 500; }
 .phero__media {
   position: absolute; z-index: 0;
-  right: calc(var(--pad) * -0.4); top: 13%;
+  right: var(--pad); top: 13%;
   width: min(52vw, 820px);
   pointer-events: none;
   will-change: transform;
@@ -189,8 +189,8 @@ ol { padding: 0; margin: 0; list-style: none; }
 /* ---------- AI Consulting ---------- */
 .orbit {
   position: absolute; z-index: 0;
-  right: -9vw; top: 44%;
-  width: min(46vw, 640px); aspect-ratio: 1;
+  right: var(--pad); top: 46%;
+  width: min(34vw, 560px); aspect-ratio: 1;
   translate: 0 -50%;
   pointer-events: none;
 }
