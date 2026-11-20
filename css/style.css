@@ -658,6 +658,10 @@ html:not(.js) .loader, .skip-loader .loader { display: none; }
     position: relative; right: auto; bottom: auto;
     margin: clamp(46px, 13vw, 80px) auto clamp(30px, 9vw, 60px);
   }
+  /* Swipe the deck sideways; vertical drags still scroll the page. */
+  .motion .fan { pointer-events: auto; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .motion .fan::before { content: ""; position: absolute; inset: -12% -32%; }
+  .motion .fcard img { -webkit-user-drag: none; pointer-events: none; }
   .hero__foot { margin-top: auto; justify-content: space-between; }
 
   .motion .collection__copy { top: 92px; left: var(--pad); right: var(--pad); width: auto; transform: none; }

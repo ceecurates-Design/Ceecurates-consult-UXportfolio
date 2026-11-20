@@ -146,6 +146,54 @@
   const fanCards = qsa('[data-fan] .fcard');
   let fanW = 300;
   let fanStep = 0.36;
+
+  /* Hero fan on phones: swipe sideways to deal the next card to the front.
+     fanPos counts cards; it eases to fanTarget, and the cards wrap around. */
+  let fanPos = 0;
+  let fanTarget = 0;
+  let fanDrag = null;
+  let fanSwiped = false;
+  const fanSwipeable = () => vw <= 860 && !reduce;
+  fanEl.addEventListener('pointerdown', (e) => {
+    if (!fanSwipeable() || fanDrag) return;
+    fanDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, p0: fanPos, axis: null, lastX: e.clientX, lastT: e.timeStamp, v: 0 };
+  });
+  fanEl.addEventListener('pointermove', (e) => {
+    const d = fanDrag;
+    if (!d || e.pointerId !== d.id) return;
+    const dx = e.clientX - d.x0;
+    const dy = e.clientY - d.y0;
+    if (!d.axis && Math.hypot(dx, dy) > 8) {
+      d.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (d.axis === 'x') { try { fanEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } }
+    }
+    if (d.axis !== 'x') return;
+    const dt = Math.max(1, e.timeStamp - d.lastT);
+    d.v = lerp(d.v, (e.clientX - d.lastX) / dt, 0.5);
+    d.lastX = e.clientX;
+    d.lastT = e.timeStamp;
+    fanPos = d.p0 - dx / (fanW * 0.7);
+  });
+  const fanRelease = (e) => {
+    const d = fanDrag;
+    if (!d || e.pointerId !== d.id) return;
+    fanDrag = null;
+    if (d.axis !== 'x' || e.type === 'pointercancel') { if (d.axis === 'x') fanTarget = Math.round(fanPos); return; }
+    fanSwiped = true;
+    const dx = e.clientX - d.x0;
+    // A flick or a short drag moves one card; a long drag can move more.
+    let steps = Math.round(-dx / (fanW * 0.7));
+    if (!steps && (Math.abs(dx) > 24 || Math.abs(d.v) > 0.35)) steps = dx < 0 ? 1 : -1;
+    fanTarget = d.p0 + steps;
+  };
+  fanEl.addEventListener('pointerup', fanRelease);
+  fanEl.addEventListener('pointercancel', fanRelease);
+  // One gentle nudge after the intro so people find out the cards move.
+  setTimeout(() => {
+    if (!fanSwipeable() || fanSwiped || scrollY > 40) return;
+    fanTarget = 0.32;
+    setTimeout(() => { if (!fanSwiped) fanTarget = 0; }, 520);
+  }, 2600);
   const heroLines = qsa('[data-line]', hero);
   const badge = qs('[data-badge]');
   const tapes = qsa('[data-tape]').map((el) => ({ el, track: qs('.tape__track', el), dir: Number(el.dataset.tape), x: 0, unit: 0 }));
@@ -288,9 +336,22 @@
       const hp = clamp(smooth / m.hero.height);
       const spread = intro * (1 + hp * 1.25);
       const turn = hp * -16 + mouse.sx * 5 + Math.sin(now / 1500) * 0.5;
-      const mid = (fanCards.length - 1) / 2;
+      const n = fanCards.length;
+      const mid = (n - 1) / 2;
+      if (!fanDrag) {
+        fanPos = lerp(fanPos, fanTarget, 1 - Math.pow(1 - 0.14, dt / 16.67));
+        if (Math.abs(fanPos - fanTarget) < 0.0005) fanPos = fanTarget;
+      }
       fanCards.forEach((c, i) => {
-        const o = i - mid;
+        // Position relative to the front card, wrapped so the deck loops.
+        let o = i - mid - fanPos;
+        o = ((((o + n / 2) % n) + n) % n) - n / 2;
+        const ao = Math.abs(o);
+        const z = String(100 - Math.round(ao * 10));
+        if (c.style.zIndex !== z) c.style.zIndex = z;
+        // Cards fade out at the very back so the wrap around is never seen.
+        const op = ao > 2 ? clamp((n / 2 - ao) / (n / 2 - 2)).toFixed(3) : '';
+        if (c.style.opacity !== op) c.style.opacity = op;
         // Wide cards: slide apart like a dealt hand, dip at the edges, then tilt.
         const x = o * fanW * fanStep * spread;
         const dip = o * o * fanW * 0.035 * spread;
