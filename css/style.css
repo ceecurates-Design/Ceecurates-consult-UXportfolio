@@ -257,8 +257,8 @@ html:not(.js) .loader, .skip-loader .loader { display: none; }
 
 /* Fan of work, sitting in front of the headline */
 .fan {
-  --fw: clamp(200px, 20vw, 360px);
-  --fan-step: 0.36;
+  --fw: clamp(150px, 17vw, 330px);
+  --fan-step: 0.32;
   position: absolute; z-index: 2;
   right: calc(var(--pad) + var(--fw) * 0.82);
   bottom: clamp(120px, 23svh, 270px);
@@ -669,8 +669,34 @@ html:not(.js) .loader, .skip-loader .loader { display: none; }
 
   .statement__row { grid-template-columns: 1fr; }
 
-  .tile { --h: min(52svh, calc(84vw / var(--ar))); }
-  .motion .wall__track { align-items: center; }
+  /* Wall on phones: a vertical stack. Each project is a dark panel that pins
+     under the nav; the next one slides over it and the one beneath sinks. */
+  .wall, .motion .wall { padding: 64px 0 72px; height: auto !important; }
+  .wall__stage, .motion .wall__stage { position: static; height: auto; overflow: visible; display: block; }
+  .wall__track, .motion .wall__track {
+    width: auto; flex-direction: column; gap: 0;
+    padding: 0 var(--pad); overflow: visible;
+    transform: none !important; will-change: auto;
+  }
+  .tile {
+    position: relative;
+    width: min(100%, 600px); align-self: center;
+    margin-bottom: 7svh;
+    padding: 8px 8px 14px;
+    border-radius: 20px;
+    background: var(--ink); color: var(--bone);
+    box-shadow: 0 22px 40px -24px rgba(14, 13, 19, 0.55);
+    transform-origin: 50% 0;
+  }
+  .tile:last-child { margin-bottom: 0; }
+  .motion .tile { position: sticky; top: calc(78px + var(--i, 0) * 12px); }
+  .tile::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--ink); opacity: var(--dim, 0); pointer-events: none;
+  }
+  .tile__card { height: auto; width: 100%; border-radius: 13px; box-shadow: none; transform: none !important; will-change: auto; }
+  .tile__cap { margin-top: 12px; padding: 0 6px; }
+  .tile__cap em { opacity: 0.6; }
 
   .about { grid-template-columns: 1fr; }
   .about__portrait { position: relative; top: auto; width: min(74%, 320px); justify-self: start; margin-left: 30px; }

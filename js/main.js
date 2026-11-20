@@ -93,18 +93,26 @@
     lastY = y;
   }, { passive: true });
 
-  /* Video: play only while on screen */
+  /* Video: play only while on screen. Visibility comes from an observer; the
+     loop calls syncVideos(), which also retries any play() a phone refused.
+     On phones the wall is a stack, so only the card on top plays. */
   const videos = qsa('[data-video]');
+  let stackVideo = null;
   if ('IntersectionObserver' in window) {
     const vio = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        const v = e.target;
-        if (e.isIntersecting && !reduce) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
-        else v.pause();
-      });
+      entries.forEach((e) => { e.target.vis = e.isIntersecting; });
     }, { threshold: 0.25 });
     videos.forEach((v) => vio.observe(v));
-  }
+  } else videos.forEach((v) => { v.vis = true; });
+  const syncVideos = (stacked) => {
+    videos.forEach((v) => {
+      const want = !reduce && v.vis && (!stacked || !v.closest('[data-tile]') || v === stackVideo);
+      if (want && v.paused && !v.pending) {
+        const p = v.play();
+        if (p && p.then) { v.pending = true; p.then(() => { v.pending = false; }, () => { v.pending = false; }); }
+      } else if (!want && !v.paused) v.pause();
+    });
+  };
 
   /* Terms and privacy sheets */
   qsa('[data-dialog-open]').forEach((btn) => {
@@ -150,7 +158,8 @@
   const slides = qsa('[data-slide]').map((el) => ({ el, dir: Number(el.dataset.slide) }));
   const wall = qs('[data-wall]');
   const track = qs('[data-track]');
-  const tiles = qsa('[data-tile]').map((el) => ({ el, card: qs('.tile__card', el), center: 0 }));
+  const tiles = qsa('[data-tile]').map((el) => ({ el, card: qs('.tile__card', el), video: qs('video', el), center: 0, cover: -1 }));
+  let stacked = false;
   const about = qs('[data-about]');
   const portrait = qs('[data-portrait]');
   const portraitBlock = qs('[data-portrait-block]');
@@ -174,10 +183,13 @@
     vw = html.clientWidth || innerWidth;
     vh = stage.offsetHeight || innerHeight;
 
-    // Wall: how far the track has to travel sets how tall the section is.
+    // Wall: wide screens pin it and travel sideways, and how far the track has
+    // to travel sets how tall the section is. Phones get the vertical stack.
+    stacked = vw <= 860;
     track.style.transform = 'none';
-    wallDist = Math.max(0, track.scrollWidth - vw);
-    wall.style.height = `${vh + wallDist}px`;
+    tiles.forEach((t) => { t.card.style.transform = ''; t.el.style.transform = ''; t.el.style.removeProperty('--dim'); t.cover = -1; });
+    wallDist = stacked ? 0 : Math.max(0, track.scrollWidth - vw);
+    wall.style.height = stacked ? '' : `${vh + wallDist}px`;
     const trackLeft = track.getBoundingClientRect().left;
     tiles.forEach((t) => {
       const r = t.card.getBoundingClientRect();
@@ -256,6 +268,7 @@
   let last = performance.now();
   let activeIdx = -1;
   let lastWordsP = -1;
+  let lastSync = 0;
 
   const frame = (now) => {
     const dt = Math.min(64, now - last);
@@ -341,8 +354,33 @@
       }
     }
 
+    /* Wall on phones: the card underneath sinks and dims as the next one
+       slides over it. The top card is the one whose video plays. */
+    if (stacked) {
+      const b = m.wall;
+      if (y > b.top - vh && y < b.top + b.height) {
+        let top = 0;
+        const rects = tiles.map((t) => t.el.getBoundingClientRect());
+        tiles.forEach((t, i) => {
+          if (rects[i].top < vh * 0.55) top = i;
+          const next = rects[i + 1];
+          let cover = 0;
+          if (next && !reduce) {
+            const h = t.el.offsetHeight;
+            cover = clamp((rects[i].top + h - next.top) / h);
+          }
+          if (Math.abs(cover - t.cover) > 0.002) {
+            t.cover = cover;
+            t.el.style.transform = cover ? `scale(${(1 - cover * 0.08).toFixed(4)})` : '';
+            t.el.style.setProperty('--dim', (cover * 0.55).toFixed(3));
+          }
+        });
+        stackVideo = tiles[top].video;
+      }
+    }
+
     /* Wall: horizontal travel with coverflow rotation */
-    {
+    if (!stacked) {
       const b = m.wall;
       if (smooth > b.top - vh && smooth < b.top + b.height) {
         const p = pinned(b, smooth);
@@ -390,6 +428,8 @@
         mg.el.style.transform = `translate3d(${mg.x.toFixed(1)}px,${mg.y.toFixed(1)}px,0)`;
       });
     }
+
+    if (now - lastSync > 200) { lastSync = now; syncVideos(stacked); }
 
     requestAnimationFrame(frame);
   };
