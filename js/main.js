@@ -153,8 +153,7 @@
   let fanTarget = 0;
   let fanDrag = null;
   let fanSwiped = false;
-  const fanHint = qs('[data-fan-hint]');
-  const fanSwipeable = () => vw <= 860 && !reduce;
+  const fanSwipeable = () => !reduce;
   fanEl.addEventListener('pointerdown', (e) => {
     if (!fanSwipeable() || fanDrag) return;
     fanDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, p0: fanPos, axis: null, lastX: e.clientX, lastT: e.timeStamp, v: 0 };
@@ -166,7 +165,10 @@
     const dy = e.clientY - d.y0;
     if (!d.axis && Math.hypot(dx, dy) > 8) {
       d.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      if (d.axis === 'x') { try { fanEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } }
+      if (d.axis === 'x') {
+        fanEl.classList.add('is-dragging');
+        try { fanEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      }
     }
     if (d.axis !== 'x') return;
     const dt = Math.max(1, e.timeStamp - d.lastT);
@@ -179,9 +181,9 @@
     const d = fanDrag;
     if (!d || e.pointerId !== d.id) return;
     fanDrag = null;
+    fanEl.classList.remove('is-dragging');
     if (d.axis !== 'x' || e.type === 'pointercancel') { if (d.axis === 'x') fanTarget = Math.round(fanPos); return; }
     fanSwiped = true;
-    if (fanHint) fanHint.classList.add('is-gone');
     const dx = e.clientX - d.x0;
     // A flick or a short drag moves one card; a long drag can move more.
     let steps = Math.round(-dx / (fanW * 0.7));
@@ -190,6 +192,22 @@
   };
   fanEl.addEventListener('pointerup', fanRelease);
   fanEl.addEventListener('pointercancel', fanRelease);
+  // Two finger trackpad swipe: one card per gesture. Momentum events keep the
+  // lock alive, so a single swipe never skips several cards.
+  let wheelAcc = 0;
+  let wheelLock = 0;
+  fanEl.addEventListener('wheel', (e) => {
+    if (!fanSwipeable() || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    if (e.timeStamp < wheelLock) { wheelLock = e.timeStamp + 180; return; }
+    wheelAcc += e.deltaX;
+    if (Math.abs(wheelAcc) > 30) {
+      fanTarget = Math.round(fanTarget) + (wheelAcc > 0 ? 1 : -1);
+      fanSwiped = true;
+      wheelAcc = 0;
+      wheelLock = e.timeStamp + 420;
+    }
+  }, { passive: false });
   // One gentle nudge after the intro so people find out the cards move.
   setTimeout(() => {
     if (!fanSwipeable() || fanSwiped || scrollY > 40) return;
@@ -197,7 +215,6 @@
     setTimeout(() => { if (!fanSwiped) fanTarget = 0; }, 900);
   }, 2600);
   const heroLines = qsa('[data-line]', hero);
-  const badge = qs('[data-badge]');
   const tapes = qsa('[data-tape]').map((el) => ({ el, track: qs('.tape__track', el), dir: Number(el.dataset.tape), x: 0, unit: 0 }));
   const collection = qs('[data-collection]');
   const wcards = qsa('[data-wcard]');
@@ -365,7 +382,6 @@
         const dir = Number(l.dataset.line);
         l.style.transform = `translate3d(${(hp * dir * vw * 0.07).toFixed(1)}px,0,0)`;
       });
-      badge.style.transform = `rotate(${(now * 0.012 + smooth * 0.16).toFixed(2)}deg)`;
     }
 
     /* Tapes: drift on their own, surge with scroll speed */
