@@ -153,6 +153,7 @@
   let fanTarget = 0;
   let fanDrag = null;
   let fanSwiped = false;
+  const fanHint = qs('[data-fan-hint]');
   const fanSwipeable = () => vw <= 860 && !reduce;
   fanEl.addEventListener('pointerdown', (e) => {
     if (!fanSwipeable() || fanDrag) return;
@@ -180,6 +181,7 @@
     fanDrag = null;
     if (d.axis !== 'x' || e.type === 'pointercancel') { if (d.axis === 'x') fanTarget = Math.round(fanPos); return; }
     fanSwiped = true;
+    if (fanHint) fanHint.classList.add('is-gone');
     const dx = e.clientX - d.x0;
     // A flick or a short drag moves one card; a long drag can move more.
     let steps = Math.round(-dx / (fanW * 0.7));
@@ -191,8 +193,8 @@
   // One gentle nudge after the intro so people find out the cards move.
   setTimeout(() => {
     if (!fanSwipeable() || fanSwiped || scrollY > 40) return;
-    fanTarget = 0.32;
-    setTimeout(() => { if (!fanSwiped) fanTarget = 0; }, 520);
+    fanTarget = 0.34;
+    setTimeout(() => { if (!fanSwiped) fanTarget = 0; }, 900);
   }, 2600);
   const heroLines = qsa('[data-line]', hero);
   const badge = qs('[data-badge]');

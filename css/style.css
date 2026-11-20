@@ -286,6 +286,7 @@ html:not(.js) .loader, .skip-loader .loader { display: none; }
   padding: 6px 9px; border-radius: 999px; line-height: 1;
   white-space: nowrap;
 }
+.fan__hint { display: none; }
 .fcard:nth-child(1) { z-index: 1; }
 .fcard:nth-child(2) { z-index: 2; }
 .fcard:nth-child(3) { z-index: 5; }
@@ -508,11 +509,6 @@ html:not(.js) .loader, .skip-loader .loader { display: none; }
 }
 .about__body { font-size: clamp(1.1rem, 1.75vw, 1.65rem); line-height: 1.42; max-width: 33em; }
 .motion .about__body .w { opacity: 0.2; transition: opacity 220ms linear; }
-.traits { display: flex; flex-wrap: wrap; gap: 10px; margin-top: clamp(28px, 4vw, 48px); }
-.traits li {
-  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 10px 16px; border-radius: 999px; border: 1.5px solid rgba(243, 238, 227, 0.5);
-}
 .about__open { margin-top: 1.3em; font-size: clamp(1.3rem, 2.3vw, 2.1rem); line-height: 1.15; max-width: 24ch; }
 
 /* Contact */
@@ -662,6 +658,19 @@ html:not(.js) .loader, .skip-loader .loader { display: none; }
   .motion .fan { pointer-events: auto; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
   .motion .fan::before { content: ""; position: absolute; inset: -12% -32%; }
   .motion .fcard img { -webkit-user-drag: none; pointer-events: none; }
+  .motion .fan__hint {
+    display: flex; align-items: center; gap: 10px;
+    position: absolute; left: 50%; top: calc(100% + 38px); translate: -50% 0;
+    margin: 0; z-index: 200; pointer-events: none;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--bone); opacity: 0.8; white-space: nowrap;
+    transition: opacity 600ms var(--ease-out);
+  }
+  .motion .fan__hint.is-gone { opacity: 0; }
+  .fan__arrow { display: inline-block; font-size: 13px; animation: fan-point 1.6s var(--ease-out) infinite; }
+  .fan__arrow--l { --dir: -1; }
+  .fan__arrow--r { --dir: 1; }
+  @keyframes fan-point { 0%, 100% { transform: translateX(0); } 45% { transform: translateX(calc(var(--dir) * 5px)); } }
   .hero__foot { margin-top: auto; justify-content: space-between; }
 
   .motion .collection__copy { top: 92px; left: var(--pad); right: var(--pad); width: auto; transform: none; }
